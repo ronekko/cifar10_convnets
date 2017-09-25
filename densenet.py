@@ -201,10 +201,11 @@ if __name__ == '__main__':
             for i in tqdm(range(0, num_test, p.batch_size)):
                 x_batch = xp.asarray(x_test[i:i+p.batch_size])
                 c_batch = xp.asarray(c_test[i:i+p.batch_size])
-                with chainer.using_config('train', False):
-                    y_batch = model(x_batch)
-                    loss = F.softmax_cross_entropy(y_batch, c_batch)
-                    acc = F.accuracy(y_batch, c_batch)
+                with chainer.no_backprop_mode():
+                    with chainer.using_config('train', False):
+                        y_batch = model(x_batch)
+                        loss = F.softmax_cross_entropy(y_batch, c_batch)
+                        acc = F.accuracy(y_batch, c_batch)
                 losses.append(loss.data)
                 accs.append(acc.data)
             test_loss = np.mean(chainer.cuda.to_cpu(xp.stack(losses)))
