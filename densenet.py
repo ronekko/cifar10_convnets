@@ -36,12 +36,13 @@ class Densenet(chainer.ChainList):
             Output channels of each primitive H(x), i.e. `k`.
     '''
     def __init__(self, num_classes=10, nums_units=[20, 20, 20], growth_rate=12,
-                 compression_factor=0.5):
+                 dropout_rate=0.2, compression_factor=0.5):
         out_channels = growth_rate * 2
         funcs = [L.Convolution2D(None, out_channels, 3, pad=1)]
         for num_units in nums_units:
             in_channels = out_channels
-            funcs.append(DenseBlock(in_channels, num_units, growth_rate))
+            funcs.append(DenseBlock(in_channels, num_units, growth_rate,
+                                    dropout_rate))
             in_channels += growth_rate * num_units
             out_channels = int(np.ceil(in_channels * compression_factor))
             funcs.append(TransitionLayer(in_channels, out_channels))
@@ -65,7 +66,7 @@ class Densenet(chainer.ChainList):
 
 
 class DenseBlock(chainer.ChainList):
-    def __init__(self, in_channels, num_units, growth_rate=12):
+    def __init__(self, in_channels, num_units, growth_rate=12, drop_rate=0.2):
         '''
         Args:
             in_channels (int):
@@ -74,6 +75,8 @@ class DenseBlock(chainer.ChainList):
                 Number of primitive functions, i.e. H(x), in the block.
             grouth_rate (int):
                 Hyper parameter `k` which is output channels of each H(x).
+            drop_rate (int):
+                Drop rate for dropout.
         '''
 
         units = []
@@ -81,10 +84,11 @@ class DenseBlock(chainer.ChainList):
             units += [BRC1BRC3(in_channels, growth_rate)]
             in_channels = in_channels + growth_rate
         super(DenseBlock, self).__init__(*units)
+        self.drop_rate = drop_rate
 
     def __call__(self, x):
         for link in self:
-            h = link(x)
+            h = F.dropout(link(x), self.drop_rate)
             x = F.concat((x, h), axis=1)
         return x
 
@@ -125,6 +129,7 @@ if __name__ == '__main__':
     p.num_classes = 10
     p.nums_units = [16, 16, 16]
     p.growth_rate = 12  # out channels of each primitive funcion in dense block
+    p.dropout_rate = 0.2
     p.num_epochs = 300
     p.batch_size = 50
     p.lr_init = 0.1
@@ -150,7 +155,7 @@ if __name__ == '__main__':
 
     # Model and optimizer
     model = Densenet(p.num_classes, nums_units=p.nums_units,
-                     growth_rate=p.growth_rate)
+                     growth_rate=p.growth_rate, dropout_rate=p.dropout_rate)
     if p.gpu >= 0:
         model.to_gpu()
     optimizer = optimizers.NesterovAG(p.lr_init)
