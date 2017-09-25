@@ -26,7 +26,7 @@ from datasets import (
 from links import BRCChain
 
 
-class Densenet(chainer.ChainList):
+class DensenetBC(chainer.ChainList):
     '''
     Args:
         nums_units (list of int):
@@ -41,15 +41,15 @@ class Densenet(chainer.ChainList):
         funcs = [L.Convolution2D(None, out_channels, 3, pad=1, nobias=True)]
         for num_units in nums_units:
             in_channels = out_channels
-            funcs.append(DenseBlock(in_channels, num_units, growth_rate,
-                                    dropout_rate))
+            funcs.append(DenseBlockBC(in_channels, num_units, growth_rate,
+                                      dropout_rate))
             in_channels += growth_rate * num_units
             out_channels = int(np.ceil(in_channels * compression_factor))
             funcs.append(TransitionLayer(in_channels, out_channels))
         funcs.pop(-1)  # in order to replace the last one with global pooling
         funcs.append(
             TransitionLayer(in_channels, num_classes, global_pool=True))
-        super(Densenet, self).__init__(*funcs)
+        super(DensenetBC, self).__init__(*funcs)
         self._num_classes = num_classes
 
     def __call__(self, x):
@@ -62,7 +62,7 @@ class Densenet(chainer.ChainList):
         return h.reshape((-1, self._num_classes))
 
 
-class DenseBlock(chainer.ChainList):
+class DenseBlockBC(chainer.ChainList):
     def __init__(self, in_channels, num_units, growth_rate=12, drop_rate=0.2):
         '''
         Args:
@@ -80,7 +80,7 @@ class DenseBlock(chainer.ChainList):
         for i in range(num_units):
             units += [BRC1BRC3(in_channels, growth_rate)]
             in_channels = in_channels + growth_rate
-        super(DenseBlock, self).__init__(*units)
+        super(DenseBlockBC, self).__init__(*units)
         self.drop_rate = drop_rate
 
     def __call__(self, x):
@@ -153,8 +153,8 @@ if __name__ == '__main__':
     x_test -= mean_rgb
 
     # Model and optimizer
-    model = Densenet(p.num_classes, nums_units=p.nums_units,
-                     growth_rate=p.growth_rate, dropout_rate=p.dropout_rate)
+    model = DensenetBC(p.num_classes, nums_units=p.nums_units,
+                       growth_rate=p.growth_rate, dropout_rate=p.dropout_rate)
     if p.gpu >= 0:
         model.to_gpu()
     optimizer = optimizers.NesterovAG(p.lr_init)
