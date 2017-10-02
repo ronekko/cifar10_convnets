@@ -47,19 +47,23 @@ class Densenet(chainer.ChainList):
             out_channels = int(np.ceil(in_channels * compression_factor))
             funcs.append(TransitionLayer(in_channels, out_channels))
         funcs.pop(-1)  # in order to replace the last one with global pooling
-        funcs.append(
-            TransitionLayer(in_channels, num_classes, global_pool=True))
+        funcs.append(L.BatchNormalization(in_channels))
+        funcs.append(L.Linear(in_channels, num_classes))
         super(Densenet, self).__init__(*funcs)
         self._num_classes = num_classes
 
     def __call__(self, x):
         conv1 = self[0]
-        blocks = self[1:]  # dense, transition, ..., dense, transision
+        blocks = self[1:-2]  # dense, transition, ..., dense, transision
+        bn = self[-2]
+        fc_out = self[-1]
 
         h = conv1(x)
         for block in blocks:
             h = block(h)
-        return h.reshape((-1, self._num_classes))
+        h = bn(h)
+        h = F.average_pooling_2d(h, h.shape[2:])
+        return fc_out(h)
 
 
 class DenseBlock(chainer.ChainList):
@@ -93,11 +97,12 @@ class DenseBlock(chainer.ChainList):
 class TransitionLayer(chainer.Chain):
     def __init__(self, in_channels, out_channels, global_pool=False):
         super(TransitionLayer, self).__init__(
-            brc=BRCChain(in_channels, out_channels, ksize=1))
+            bn=L.BatchNormalization(in_channels),
+            conv=L.Convolution2D(in_channels, out_channels, 1))
         self.global_pool = global_pool
 
     def __call__(self, x):
-        h = self.brc(x)
+        h = self.conv(self.bn(x))
         if self.global_pool:
             ksize = h.shape[2:]
         else:

@@ -127,7 +127,7 @@ if __name__ == '__main__':
     p.gpu = 0
     p.num_classes = 10
     p.nums_units = [16, 16, 16]
-    p.growth_rate = 12  # out channels of each primitive funcion in dense block
+    p.growth_rate = 24  # out channels of each primitive funcion in dense block
     p.dropout_rate = 0.2
     p.num_epochs = 300
     p.batch_size = 50
@@ -175,8 +175,8 @@ if __name__ == '__main__':
             epoch_losses = []
             epoch_accs = []
             for i in tqdm(range(0, num_train, p.batch_size)):
-#                x_batch = random_augment(x_train[i:i+batch_size],
-#                                         max_expand_pixel)
+#                x_batch = random_augment(x_train[i:i+p.batch_size],
+#                                         p.max_expand_pixel)
                 x_batch = random_augment2(x_train[i:i+p.batch_size])
                 x_batch = xp.asarray(x_batch)
                 c_batch = xp.asarray(c_train[i:i+p.batch_size])
