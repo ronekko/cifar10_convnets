@@ -26,7 +26,7 @@ from datasets import (
 from links import BRCChain
 
 
-class Densenet(chainer.ChainList):
+class DensenetBC(chainer.ChainList):
     '''
     Args:
         nums_units (list of int):
@@ -41,32 +41,28 @@ class Densenet(chainer.ChainList):
         funcs = [L.Convolution2D(None, out_channels, 3, pad=1, nobias=True)]
         for num_units in nums_units:
             in_channels = out_channels
-            funcs.append(DenseBlock(in_channels, num_units, growth_rate,
-                                    dropout_rate))
+            funcs.append(DenseBlockBC(in_channels, num_units, growth_rate,
+                                      dropout_rate))
             in_channels += growth_rate * num_units
             out_channels = int(np.ceil(in_channels * compression_factor))
             funcs.append(TransitionLayer(in_channels, out_channels))
         funcs.pop(-1)  # in order to replace the last one with global pooling
-        funcs.append(L.BatchNormalization(in_channels))
-        funcs.append(L.Linear(in_channels, num_classes))
-        super(Densenet, self).__init__(*funcs)
+        funcs.append(
+            TransitionLayer(in_channels, num_classes, global_pool=True))
+        super(DensenetBC, self).__init__(*funcs)
         self._num_classes = num_classes
 
     def __call__(self, x):
         conv1 = self[0]
-        blocks = self[1:-2]  # dense, transition, ..., dense, transision
-        bn = self[-2]
-        fc_out = self[-1]
+        blocks = self[1:]  # dense, transition, ..., dense, transision
 
         h = conv1(x)
         for block in blocks:
             h = block(h)
-        h = bn(h)
-        h = F.average_pooling_2d(h, h.shape[2:])
-        return fc_out(h)
+        return h.reshape((-1, self._num_classes))
 
 
-class DenseBlock(chainer.ChainList):
+class DenseBlockBC(chainer.ChainList):
     def __init__(self, in_channels, num_units, growth_rate=12, drop_rate=0.2):
         '''
         Args:
@@ -82,9 +78,9 @@ class DenseBlock(chainer.ChainList):
 
         units = []
         for i in range(num_units):
-            units += [BRCChain(in_channels + i * growth_rate, growth_rate,
-                               ksize=3, pad=1, nobias=True)]
-        super(DenseBlock, self).__init__(*units)
+            units += [BRC1BRC3(in_channels, growth_rate)]
+            in_channels = in_channels + growth_rate
+        super(DenseBlockBC, self).__init__(*units)
         self.drop_rate = drop_rate
 
     def __call__(self, x):
@@ -94,15 +90,29 @@ class DenseBlock(chainer.ChainList):
         return x
 
 
+class BRC1BRC3(chainer.Chain):
+    def __init__(self, in_channels, out_channels, **kwargs):
+        bottleneck = 4 * out_channels
+        super(BRC1BRC3, self).__init__(
+            brc1=BRCChain(in_channels, bottleneck,
+                          ksize=1, pad=0, nobias=True),
+            brc3=BRCChain(bottleneck, out_channels,
+                          ksize=3, pad=1, nobias=True))
+
+    def __call__(self, x):
+        h = self.brc1(x)
+        y = self.brc3(h)
+        return y
+
+
 class TransitionLayer(chainer.Chain):
     def __init__(self, in_channels, out_channels, global_pool=False):
         super(TransitionLayer, self).__init__(
-            bn=L.BatchNormalization(in_channels),
-            conv=L.Convolution2D(in_channels, out_channels, 1))
+            brc=BRCChain(in_channels, out_channels, ksize=1))
         self.global_pool = global_pool
 
     def __call__(self, x):
-        h = self.conv(self.bn(x))
+        h = self.brc(x)
         if self.global_pool:
             ksize = h.shape[2:]
         else:
@@ -117,7 +127,7 @@ if __name__ == '__main__':
     p.gpu = 0
     p.num_classes = 10
     p.nums_units = [16, 16, 16]
-    p.growth_rate = 12  # out channels of each primitive funcion in dense block
+    p.growth_rate = 24  # out channels of each primitive funcion in dense block
     p.dropout_rate = 0.2
     p.num_epochs = 300
     p.batch_size = 50
@@ -143,8 +153,8 @@ if __name__ == '__main__':
     x_test -= mean_rgb
 
     # Model and optimizer
-    model = Densenet(p.num_classes, nums_units=p.nums_units,
-                     growth_rate=p.growth_rate, dropout_rate=p.dropout_rate)
+    model = DensenetBC(p.num_classes, nums_units=p.nums_units,
+                       growth_rate=p.growth_rate, dropout_rate=p.dropout_rate)
     if p.gpu >= 0:
         model.to_gpu()
     optimizer = optimizers.NesterovAG(p.lr_init)
@@ -165,8 +175,8 @@ if __name__ == '__main__':
             epoch_losses = []
             epoch_accs = []
             for i in tqdm(range(0, num_train, p.batch_size)):
-#                x_batch = random_augment(x_train[i:i+batch_size],
-#                                         max_expand_pixel)
+#                x_batch = random_augment(x_train[i:i+p.batch_size],
+#                                         p.max_expand_pixel)
                 x_batch = random_augment2(x_train[i:i+p.batch_size])
                 x_batch = xp.asarray(x_batch)
                 c_batch = xp.asarray(c_train[i:i+p.batch_size])
