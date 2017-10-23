@@ -139,6 +139,14 @@ class ResnetUnit(chainer.Chain):
 def extend_channels(x, out_ch):
     '''Extends channels (i.e. depth) of the input BCHW tensor x by zero-padding
     if out_ch is larger than the number of channels of x, otherwise returns x.
+
+    Note that this function is different from `functions.extend_channels` that
+    pads a zero-filled tensor by concatenating it to the end of `x`
+    as following:
+        [1, 2, 3, 4] -> [1, 2, 3, 4, 0, 0, 0, 0, 0, 0]
+    On the other hand, this function is modified to fit to use with revnet that
+    pads zeros as following:
+        [1, 2, 3, 4] -> [1, 2, 0, 0, 0, 3, 4, 0, 0, 0]
     '''
     b, in_ch, h, w = x.shape
     if in_ch == out_ch:
@@ -151,6 +159,7 @@ def extend_channels(x, out_ch):
     filler_shape = (b, (out_ch - in_ch) // 2, h, w)
     filler = xp.zeros(filler_shape, x.dtype)
     return F.concat((x1, filler, x2, filler), axis=1)
+
 
 if __name__ == '__main__':
     # Hyperparameters
