@@ -36,19 +36,19 @@ class Revnet(chainer.Chain):
     def __init__(self, n=6):
         super(Revnet, self).__init__(
             conv1=L.Convolution2D(3, 32, 3, pad=1),
-            group2=RevnetStage(n, 32),
-            group3=RevnetStage(n, 64),
-            group4=RevnetStage(n, 112),
+            stage2=RevnetStage(n, 32),
+            stage3=RevnetStage(n, 64),
+            stage4=RevnetStage(n, 112),
             brc_out=BRCChain(112, 10, 1, pad=0)
         )
 
     def __call__(self, x):
         h = self.conv1(x)
-        h = self.group2(h)
+        h = self.stage2(h)
         h = F.max_pooling_2d(h, 2)
-        h = self.group3(h)
+        h = self.stage3(h)
         h = F.max_pooling_2d(h, 2)
-        h = self.group4(h)
+        h = self.stage4(h)
         h = self.brc_out(h)
         y = F.average_pooling_2d(h, h.shape[2:]).reshape(-1, 10)
         return y
@@ -64,8 +64,8 @@ class RevnetStage(chainer.ChainList):
 
     def __call__(self, x):
         x = extend_channels(x, self._channels)
-        revnet_group_function = RevnetStageFunction(self)
-        y = revnet_group_function(x)
+        revnet_stage_function = RevnetStageFunction(self)
+        y = revnet_stage_function(x)
         return y
 
 
