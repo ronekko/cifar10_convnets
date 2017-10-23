@@ -18,10 +18,11 @@ class BRCChain(chainer.Chain):
     Convolution2D (a.k.a. pre-activation unit).
     '''
     def __init__(self, in_channels, out_channels, ksize=None, stride=1, pad=0,
-                 nobias=False, initialW=None, initial_bias=None, **kwargs):
+                 nobias=False, initialW=None, initial_bias=None, decay=0.9,
+                 **kwargs):
         in_ch, out_ch = in_channels, out_channels
         super(BRCChain, self).__init__(
-            bn=L.BatchNormalization(in_ch),
+            bn=L.BatchNormalization(in_ch, decay=decay),
             conv=L.Convolution2D(in_ch, out_ch, ksize=ksize, stride=stride,
                                  pad=pad, nobias=nobias, initialW=initialW,
                                  initial_bias=initial_bias, **kwargs))
