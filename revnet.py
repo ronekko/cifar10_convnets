@@ -35,11 +35,12 @@ class Revnet(chainer.Chain):
 
     def __init__(self, n=6):
         super(Revnet, self).__init__(
-            conv1=L.Convolution2D(3, 32, 3, pad=1),
+            conv1=L.Convolution2D(3, 32, 3, pad=1, nobias=True),
             stage2=RevnetStage(n, 32),
             stage3=RevnetStage(n, 64),
             stage4=RevnetStage(n, 112),
-            brc_out=BRCChain(112, 10, 1, pad=0)
+            bn_out=L.BatchNormalization(112),
+            fc_out=L.Linear(112, 10)
         )
 
     def __call__(self, x):
@@ -49,8 +50,10 @@ class Revnet(chainer.Chain):
         h = self.stage3(h)
         h = F.max_pooling_2d(h, 2)
         h = self.stage4(h)
-        h = self.brc_out(h)
-        y = F.average_pooling_2d(h, h.shape[2:]).reshape(-1, 10)
+        h = self.bn_out(h)
+        h = F.relu(h)
+        h = F.average_pooling_2d(h, h.shape[2:])
+        y = self.fc_out(h)
         return y
 
 
@@ -165,13 +168,13 @@ if __name__ == '__main__':
     # Hyperparameters
     p = SimpleNamespace()
     p.gpu = 0  # GPU>=0, CPU < 0
-    p.n = 6   # number of units in each group
-    p.num_epochs = 200
+    p.n = 6   # number of units in each stage
+    p.num_epochs = 160
     p.batch_size = 100
     p.lr_init = 0.1
     p.lr_decrease_rate = 0.1
     p.weight_decay = 2e-4
-    p.epochs_lr_divide10 = [80, 120, 160]
+    p.epochs_lr_divide10 = [80, 120]
 
     xp = np if p.gpu < 0 else chainer.cuda.cupy
 
@@ -283,3 +286,5 @@ if __name__ == '__main__':
     print('best test acc = {} (# {})'.format(best_test_acc,
                                              best_epoch))
     print(p)
+    print(optimizer)
+
