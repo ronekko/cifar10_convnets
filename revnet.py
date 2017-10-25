@@ -140,7 +140,7 @@ class ResnetUnit(chainer.Chain):
     def __call__(self, x):
         h = self.brc1(x)
         h = self.brc2(h)
-        return x + h
+        return h
 
 
 def extend_channels(x, out_ch):
