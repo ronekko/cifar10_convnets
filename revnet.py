@@ -29,8 +29,6 @@ from links import BRCChain
 class Revnet(chainer.Chain):
     '''
     Reversible Residual Network.
-    At this time, lengths of RevnetStage should not be larger than about `n=12`
-    due to numerical instability of reverse reconstruction.
 
     Args:
         n (int):
