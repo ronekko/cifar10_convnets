@@ -20,7 +20,7 @@ class TestRevnetStage(unittest.TestCase):
         B = 10  # batch size
         C = 32
         H, W = 32, 32
-        n = 3  # number of units in each stage
+        n = 20  # number of units in each stage
 
         self.chainlist = revnet.RevnetStage(n, C)
 
@@ -29,19 +29,19 @@ class TestRevnetStage(unittest.TestCase):
         self.gy = numpy.random.uniform(
             -1, 1, (B, C, H, W)).astype(numpy.float32)
         self.check_backward_options = {
-            'dtype': numpy.float32, 'atol': 1e-0, 'eps': 5e-4}
+            'dtype': numpy.float32, 'atol': 1e-2, 'rtol': 5e-2, 'eps': 5e-4}
 
     def check_backward(self, x_data, y_grad):
         gradient_check.check_backward(
             lambda _x: self.chainlist(_x),
             x_data, y_grad, **self.check_backward_options)
 
-    @condition.retry(3)
+    @condition.retry(5)
     def test_backward_cpu(self):
         self.check_backward(self.x, self.gy)
 
     @attr.gpu
-    @condition.retry(3)
+    @condition.retry(5)
     def test_backward_gpu(self):
         self.chainlist.to_gpu()
         self.check_backward(cuda.to_gpu(self.x), cuda.to_gpu(self.gy))
@@ -59,18 +59,20 @@ class TestRevnetStage(unittest.TestCase):
         y_reverse.grad = y_grad
         y_reverse.backward()
 
-        testing.assert_allclose(x_direct.grad, x_reverse.grad, atol=1e-3)
+        testing.assert_allclose(x_direct.grad, x_reverse.grad,
+                                atol=1e-3, rtol=3e-0)
 
         for p_direct, p_reverse in zip(net_direct.params(),
                                        net_reverse.params()):
-            testing.assert_allclose(p_direct.grad, p_reverse.grad, atol=1e-3)
+            testing.assert_allclose(p_direct.grad, p_reverse.grad,
+                                    atol=1e-3, rtol=2e-0)
 
-    @condition.retry(3)
+    @condition.retry(5)
     def test_check_allclose_backward_by_direct_and_reverse_cpu(self):
         self.check_allclose_backward_by_direct_and_reverse(self.x, self.gy)
 
     @attr.gpu
-    @condition.retry(3)
+    @condition.retry(5)
     def test_check_allclose_backward_by_direct_and_reverse_gpu(self):
         self.chainlist.to_gpu()
         self.check_allclose_backward_by_direct_and_reverse(
