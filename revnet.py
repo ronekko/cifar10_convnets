@@ -23,7 +23,6 @@ from datasets import (
     load_cifar10_as_ndarray, random_augment, random_augment2)
 
 from links import BRCChain
-#from functions import extend_channels
 
 
 class Revnet(chainer.Chain):
@@ -289,4 +288,3 @@ if __name__ == '__main__':
                                              best_epoch))
     print(p)
     print(optimizer)
-
