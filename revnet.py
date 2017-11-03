@@ -19,8 +19,7 @@ import chainer
 import chainer.functions as F
 import chainer.links as L
 from chainer import optimizers
-from datasets import (
-    load_cifar10_as_ndarray, random_augment, random_augment2)
+from datasets import load_cifar10_as_ndarray, random_augment_padding
 
 from links import BRCChain
 
@@ -123,12 +122,11 @@ class RevnetStageFunction(chainer.Function):
         return gx,
 
 
-class ResnetUnit(chainer.Chain):
-    '''Residual unit (y = x + f(x)) of 'pre-activation'.
-    This corresponds to the function F or G in the revnet paper.
+class RevnetUnit(chainer.Chain):
+    '''The function F or G in the revnet paper.
     '''
     def __init__(self, channels):
-        super(ResnetUnit, self).__init__(
+        super(RevnetUnit, self).__init__(
             # In revnet training, BN's `decay` parameters should be `sqrt`ed
             # in order to compensate double forward passes for one update.
             brc1=BRCChain(channels, channels, 3, pad=1, decay=0.9**0.5),
@@ -214,9 +212,7 @@ if __name__ == '__main__':
             epoch_losses = []
             epoch_accs = []
             for i in tqdm(range(0, num_train, p.batch_size)):
-#                x_batch = random_augment(x_train[i:i+batch_size],
-#                                         max_expand_pixel)
-                x_batch = random_augment2(x_train[i:i+p.batch_size])
+                x_batch = random_augment_padding(x_train[i:i+p.batch_size])
                 x_batch = xp.asarray(x_batch)
                 c_batch = xp.asarray(c_train[i:i+p.batch_size])
                 model.cleargrads()

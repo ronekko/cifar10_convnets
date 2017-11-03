@@ -40,7 +40,7 @@ def random_flip_lr(x):
     return x
 
 
-def random_augment(bchw, max_expand=3):
+def random_augment_scaling(bchw, max_expand=3):
     '''Data augmentation by random expanding by scaling up and cropping
     '''
     if isinstance(max_expand, int):
@@ -68,7 +68,7 @@ def random_augment(bchw, max_expand=3):
     return results.transpose(0, 3, 1, 2)
 
 
-def random_augment2(bchw, pad=4):
+def random_augment_padding(bchw, pad=4):
     '''Data augmentation by random expanding by padding and cropping
     '''
     if isinstance(pad, int):
@@ -89,7 +89,3 @@ def random_augment2(bchw, pad=4):
         result[:] = cropped
 
     return results
-
-
-if __name__ == '__main__':
-    pass

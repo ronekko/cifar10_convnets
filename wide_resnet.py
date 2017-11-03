@@ -18,8 +18,7 @@ import chainer
 import chainer.functions as F
 import chainer.links as L
 from chainer import optimizers
-from datasets import (
-    load_cifar10_as_ndarray, random_augment, random_augment2)
+from datasets import load_cifar10_as_ndarray, random_augment_padding
 
 from links import BRCChain
 from functions import extend_channels
@@ -87,7 +86,7 @@ class ResnetBlock(chainer.Chain):
 if __name__ == '__main__':
     # Hyperparameters
     p = SimpleNamespace()
-    p.gpu = -1  # GPU>=0, CPU < 0
+    p.gpu = 0  # GPU>=0, CPU < 0
     p.n = 4   # number of blocks in each group
     p.k = 10  # widening factor
     p.num_epochs = 200
@@ -134,9 +133,7 @@ if __name__ == '__main__':
             epoch_losses = []
             epoch_accs = []
             for i in tqdm(range(0, num_train, p.batch_size)):
-#                x_batch = random_augment(x_train[i:i+batch_size],
-#                                         max_expand_pixel)
-                x_batch = random_augment2(x_train[i:i+p.batch_size])
+                x_batch = random_augment_padding(x_train[i:i+p.batch_size])
                 x_batch = xp.asarray(x_batch)
                 c_batch = xp.asarray(c_train[i:i+p.batch_size])
                 model.cleargrads()
