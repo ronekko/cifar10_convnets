@@ -194,10 +194,11 @@ if __name__ == '__main__':
     hparams.channels = [32, 32, 64, 128]
     hparams.num_epochs = 160
     hparams.batch_size = 100
+    hparams.optimizer = chainer.optimizers.NesterovAG
     hparams.lr_init = 0.1
     hparams.lr_decrease_rate = 0.1
     hparams.weight_decay = 2e-4
-    hparams.epochs_lr_divide10 = [80, 120]
+    hparams.epochs_decrease_lr = [80, 120]
 
     model = Revnet(hparams.n, hparams.channels, hparams.use_bottleneck)
 

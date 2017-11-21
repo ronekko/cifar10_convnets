@@ -10,6 +10,7 @@ https://arxiv.org/abs/1608.06993v3
 """
 
 from types import SimpleNamespace
+import numpy as np
 
 import chainer
 import chainer.functions as F
@@ -124,11 +125,12 @@ if __name__ == '__main__':
     hparams.dropout_rate = 0.2
     hparams.num_epochs = 300
     hparams.batch_size = 50
+    hparams.optimizer = chainer.optimizers.NesterovAG
     hparams.lr_init = 0.1
     hparams.lr_decrease_rate = 0.1
     hparams.weight_decay = 1e-4
     hparams.max_expand_pixel = 8
-    hparams.epochs_lr_divide10 = [150, 225]
+    hparams.epochs_decrease_lr = [150, 225]
 
     model = DensenetBC(hparams.num_classes, hparams.nums_units,
                        hparams.growth_rate, hparams.dropout_rate)

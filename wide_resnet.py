@@ -85,10 +85,11 @@ if __name__ == '__main__':
     hparams.k = 10  # widening factor
     hparams.num_epochs = 200
     hparams.batch_size = 100
+    hparams.optimizer = chainer.optimizers.NesterovAG
     hparams.lr_init = 0.1
     hparams.lr_decrease_rate = 0.2
     hparams.weight_decay = 5e-4
-    hparams.epochs_lr_divide10 = [60, 120, 160]
+    hparams.epochs_decrease_lr = [60, 120, 160]
 
     # Model and optimizer
     model = WideResnet(hparams.n, hparams.k)

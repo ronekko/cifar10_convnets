@@ -13,9 +13,6 @@ from tqdm import tqdm
 
 import chainer
 import chainer.functions as F
-import chainer.links as L
-from chainer import cuda, Variable
-from chainer import optimizers
 
 from datasets import load_cifar10_as_ndarray, random_augment_padding
 
@@ -40,7 +37,7 @@ def train_eval(model, hparams):
     # Model and optimizer
     if p.gpu >= 0:
         model.to_gpu()
-    optimizer = optimizers.NesterovAG(p.lr_init)
+    optimizer = p.optimizer(p.lr_init)
     optimizer.setup(model)
     optimizer.add_hook(chainer.optimizer.WeightDecay(p.weight_decay))
 
@@ -52,7 +49,7 @@ def train_eval(model, hparams):
     best_test_acc = 0
     try:
         for epoch in range(p.num_epochs):
-            if epoch in p.epochs_lr_divide10:
+            if epoch in p.epochs_decrease_lr:
                 optimizer.lr *= p.lr_decrease_rate
 
             epoch_losses = []
@@ -113,6 +110,7 @@ def train_eval(model, hparams):
             plt.title('Loss')
             plt.plot(train_loss_log, label='train loss')
             plt.plot(test_loss_log, label='test loss')
+            plt.ylim(0, 1)
             plt.legend()
             plt.grid()
             plt.show()
@@ -121,6 +119,7 @@ def train_eval(model, hparams):
             plt.title('Accucary')
             plt.plot(train_acc_log, label='train acc')
             plt.plot(test_acc_log, label='test acc')
+            plt.ylim(0.6, 1)
             plt.legend()
             plt.grid()
             plt.show()
@@ -131,6 +130,7 @@ def train_eval(model, hparams):
     print('best test acc = {} (# {})'.format(best_test_acc,
                                              best_epoch))
     print(p)
+    print()
 
     best_model.cleargrads()
     return (best_model, best_test_loss, best_test_acc, best_epoch,

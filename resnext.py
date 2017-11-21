@@ -140,10 +140,11 @@ if __name__ == '__main__':
     hparams.ch_group_out = 4  # 64
     hparams.num_epochs = 300  # appendix A
     hparams.batch_size = 100
+    hparams.optimizer = chainer.optimizers.NesterovAG
     hparams.lr_init = 0.1  # appendix A
     hparams.lr_decrease_rate = 0.1  # appendix A
     hparams.weight_decay = 5e-4  # appendix A 5e-4
-    hparams.epochs_lr_divide10 = [150, 225]  # appendix A
+    hparams.epochs_decrease_lr = [150, 225]  # appendix A
 
     model = Resnext(hparams.n_blocks, hparams.channels, hparams.ch_bottleneck,
                     hparams.cardinality, hparams.ch_group_out)
